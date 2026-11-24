@@ -1,0 +1,27 @@
+{
+  "slos": [
+    {
+      "name": "ingest-availability",
+      "objective": 99.9,
+      "good": "sum(rate(ts_batches_total{result=\"ok\"}[{{window}}]))",
+      "total": "sum(rate(ts_batches_total[{{window}}]))"
+    },
+    {
+      "name": "ingest-latency-250ms",
+      "objective": 99.0,
+      "good": "sum(rate(ts_batch_seconds_bucket{le=\"0.25\"}[{{window}}]))",
+      "total": "sum(rate(ts_batch_seconds_count[{{window}}]))"
+    },
+    {
+      "name": "fleet-checks",
+      "objective": 99.0,
+      "good": "sum(avg_over_time(fleetguard_check_up[{{window}}]))",
+      "total": "count(fleetguard_check_up)"
+    }
+  ],
+  "windows": [
+    {"long": "1h", "short": "5m",  "factor": 14.4, "severity": "page"},
+    {"long": "6h", "short": "30m", "factor": 6,    "severity": "page"},
+    {"long": "3d", "short": "6h",  "factor": 1,    "severity": "ticket"}
+  ]
+}
