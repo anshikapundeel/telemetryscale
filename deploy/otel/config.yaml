@@ -1,0 +1,27 @@
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: 0.0.0.0:4317 }
+      http: { endpoint: 0.0.0.0:4318 }
+
+processors:
+  batch: { timeout: 1s, send_batch_size: 8192 }
+  memory_limiter: { check_interval: 1s, limit_mib: 512 }
+
+exporters:
+  prometheusremotewrite:
+    endpoint: http://mimir:9009/api/v1/push
+    headers:
+      X-Scope-OrgID: tenant-a
+  clickhouse:
+    endpoint: tcp://clickhouse:9000?dial_timeout=10s
+    database: telemetry
+    create_schema: true
+    timeout: 5s
+    retry_on_failure: { enabled: true, initial_interval: 1s, max_interval: 30s }
+
+service:
+  pipelines:
+    metrics: { receivers: [otlp], processors: [memory_limiter, batch], exporters: [prometheusremotewrite] }
+    logs:    { receivers: [otlp], processors: [memory_limiter, batch], exporters: [clickhouse] }
+    traces:  { receivers: [otlp], processors: [memory_limiter, batch], exporters: [clickhouse] }

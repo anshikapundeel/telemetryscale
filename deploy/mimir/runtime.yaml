@@ -1,0 +1,8 @@
+# Per-tenant limits: the noisy-tenant experiment tightens these for "tenant-b".
+overrides:
+  tenant-a:
+    max_global_series_per_user: 1500000
+    ingestion_rate: 100000
+  tenant-b:
+    max_global_series_per_user: 200000
+    ingestion_rate: 20000

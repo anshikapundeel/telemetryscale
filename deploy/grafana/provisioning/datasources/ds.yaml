@@ -1,0 +1,10 @@
+apiVersion: 1
+datasources:
+  - name: Mimir-tenant-a
+    type: prometheus
+    url: http://mimir:9009/prometheus
+    jsonData: { httpHeaderName1: X-Scope-OrgID }
+    secureJsonData: { httpHeaderValue1: tenant-a }
+  - name: ClickHouse
+    type: grafana-clickhouse-datasource
+    jsonData: { host: clickhouse, port: 9000, protocol: native, defaultDatabase: telemetry }

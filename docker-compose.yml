@@ -1,0 +1,51 @@
+# TelemetryScale local stack. `make up` to start.
+services:
+  mimir:
+    image: grafana/mimir:2.13.0
+    command: ["-config.file=/etc/mimir/mimir.yaml"]
+    volumes:
+      - ./deploy/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - ./deploy/mimir/runtime.yaml:/etc/mimir/runtime.yaml:ro
+    ports: ["9009:9009"]
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    ulimits: { nofile: { soft: 262144, hard: 262144 } }
+    volumes:
+      - ./deploy/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports: ["8123:8123", "9000:9000"]
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports: ["9200:9200"]
+    profiles: ["elk"]
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.14.3
+    volumes:
+      - ./deploy/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    ports: ["5044:5044", "8080:8080"]
+    depends_on: [elasticsearch]
+    profiles: ["elk"]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.104.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./deploy/otel/config.yaml:/etc/otel/config.yaml:ro
+    ports: ["4317:4317", "4318:4318"]
+    depends_on: [mimir, clickhouse]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports: ["3000:3000"]
+    depends_on: [mimir, clickhouse]
