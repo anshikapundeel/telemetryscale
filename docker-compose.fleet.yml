@@ -1,0 +1,27 @@
+# FleetGuard lab: HAProxy + two backends, SMTP sink, dnsmasq (DNS/DHCP), optional FreeIPA.
+# Start with: docker compose -f docker-compose.fleet.yml up -d
+services:
+  nginx-a: { image: nginx:1.27-alpine }
+  nginx-b: { image: nginx:1.27-alpine }
+  haproxy:
+    image: haproxy:3.0-alpine
+    volumes: ["./deploy/fleet/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"]
+    ports: ["8080:8080", "8404:8404"]
+    depends_on: [nginx-a, nginx-b]
+  mailpit:
+    image: axllent/mailpit:v1.20
+    ports: ["1025:1025", "8025:8025"]
+  dnsmasq:
+    image: 4km3/dnsmasq:2.90-r3
+    cap_add: [NET_ADMIN]
+    volumes: ["./deploy/fleet/dnsmasq.conf:/etc/dnsmasq.conf:ro"]
+    ports: ["5353:53/udp"]
+  freeipa:
+    # Kerberos (88), LDAP (389), DNS and a CA in one box. Heavy: needs ~2GB RAM and systemd.
+    image: freeipa/freeipa-server:fedora-40
+    profiles: ["ipa"]
+    hostname: ipa.lab.test
+    privileged: true
+    environment:
+      IPA_SERVER_INSTALL_OPTS: "-U -r LAB.TEST --setup-dns --no-forwarders --no-ntp -p Secret123 -a Secret123"
+    ports: ["88:88", "389:389", "443:443", "8443:443"]

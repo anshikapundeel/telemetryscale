@@ -1,0 +1,12 @@
+---
+version:
+  config: 1700000000
+  puppet: "8.4.0"
+resources:
+  total: 120
+time:
+  last_run: 0
+events:
+  failure: 0
+  success: 14
+  total: 14

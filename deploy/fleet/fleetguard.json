@@ -1,0 +1,15 @@
+{
+  "interval": "30s",
+  "workers": 8,
+  "timeout": "5s",
+  "targets": [
+    {"check": "tls",      "target": "localhost:8443", "min_days": 14, "insecure": true},
+    {"check": "dns",      "target": "web.lab.test",   "server": "127.0.0.1:5353"},
+    {"check": "smtp",     "target": "localhost:1025"},
+    {"check": "haproxy",  "target": "http://localhost:8404/stats;csv"},
+    {"check": "puppet",   "target": "lab/puppet/last_run_summary.yaml", "max_age_min": 60},
+    {"check": "dhcp",     "target": "lab/dhcp/dnsmasq.leases", "pool_size": 100, "max_util": 0.9},
+    {"check": "kerberos", "target": "localhost:88"},
+    {"check": "ldap",     "target": "localhost:389"}
+  ]
+}
