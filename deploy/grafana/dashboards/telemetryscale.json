@@ -1,0 +1,175 @@
+{
+ "uid": "telemetryscale",
+ "title": "TelemetryScale: pipeline, SLOs, fleet",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "5s",
+ "time": {
+  "from": "now-30m",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "timeseries",
+   "title": "Delivered samples/s",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-a"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(rate(ts_samples_sent_total[1m]))",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-a"
+     }
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "type": "timeseries",
+   "title": "Dropped samples/s",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 0
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-a"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(rate(ts_samples_dropped_total[1m]))",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-a"
+     }
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "timeseries",
+   "title": "Queue depth",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-a"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "ts_queue_depth",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-a"
+     }
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "type": "timeseries",
+   "title": "Batch latency p99 (s)",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 8
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-a"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.99, sum(rate(ts_batch_seconds_bucket[1m])) by (le))",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-a"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "SLI error ratio (1h)",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 16
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-a"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "slo:sli_error_ratio:rate1h",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-a"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "Fleet checks up (1 = healthy)",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 16
+   },
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-a"
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "fleetguard_check_up",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-a"
+     }
+    }
+   ]
+  }
+ ]
+}

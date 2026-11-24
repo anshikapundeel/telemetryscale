@@ -1,8 +1,15 @@
+extensions:
+  headers_setter:
+    headers:
+      - action: insert
+        key: X-Scope-OrgID
+        from_context: x-scope-orgid   # set by the sender; forwarded so Mimir stays multi-tenant
+
 receivers:
   otlp:
     protocols:
-      grpc: { endpoint: 0.0.0.0:4317 }
-      http: { endpoint: 0.0.0.0:4318 }
+      grpc: { endpoint: 0.0.0.0:4317, include_metadata: true }
+      http: { endpoint: 0.0.0.0:4318, include_metadata: true }
 
 processors:
   batch: { timeout: 1s, send_batch_size: 8192 }
@@ -11,8 +18,7 @@ processors:
 exporters:
   prometheusremotewrite:
     endpoint: http://mimir:9009/api/v1/push
-    headers:
-      X-Scope-OrgID: tenant-a
+    auth: { authenticator: headers_setter }
   clickhouse:
     endpoint: tcp://clickhouse:9000?dial_timeout=10s
     database: telemetry
@@ -21,6 +27,7 @@ exporters:
     retry_on_failure: { enabled: true, initial_interval: 1s, max_interval: 30s }
 
 service:
+  extensions: [headers_setter]
   pipelines:
     metrics: { receivers: [otlp], processors: [memory_limiter, batch], exporters: [prometheusremotewrite] }
     logs:    { receivers: [otlp], processors: [memory_limiter, batch], exporters: [clickhouse] }
