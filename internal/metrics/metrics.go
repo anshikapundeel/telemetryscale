@@ -4,6 +4,7 @@ package metrics
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"sort"
 	"sync"
@@ -14,6 +15,11 @@ type Counter struct{ v atomic.Uint64 }
 
 func (c *Counter) Add(n uint64)  { c.v.Add(n) }
 func (c *Counter) Value() uint64 { return c.v.Load() }
+
+type Gauge struct{ bits atomic.Uint64 }
+
+func (g *Gauge) Set(v float64)  { g.bits.Store(math.Float64bits(v)) }
+func (g *Gauge) Value() float64 { return math.Float64frombits(g.bits.Load()) }
 
 // Histogram with fixed upper bounds (seconds), cumulative on export.
 type Histogram struct {
@@ -38,10 +44,11 @@ type Registry struct {
 	mu       sync.Mutex
 	counters map[string]*Counter
 	hists    map[string]*Histogram
+	gauges   map[string]*Gauge
 }
 
 func NewRegistry() *Registry {
-	return &Registry{counters: map[string]*Counter{}, hists: map[string]*Histogram{}}
+	return &Registry{counters: map[string]*Counter{}, hists: map[string]*Histogram{}, gauges: map[string]*Gauge{}}
 }
 
 // Counter name may include labels, e.g. `ts_batches_total{result="ok"}`.
@@ -54,6 +61,17 @@ func (r *Registry) Counter(name string) *Counter {
 		r.counters[name] = c
 	}
 	return c
+}
+
+func (r *Registry) Gauge(name string) *Gauge {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	g, ok := r.gauges[name]
+	if !ok {
+		g = &Gauge{}
+		r.gauges[name] = g
+	}
+	return g
 }
 
 func (r *Registry) Histogram(name string, bounds []float64) *Histogram {
@@ -77,6 +95,14 @@ func (r *Registry) Expose(w io.Writer) {
 	sort.Strings(names)
 	for _, n := range names {
 		fmt.Fprintf(w, "%s %d\n", n, r.counters[n].Value())
+	}
+	gn := make([]string, 0, len(r.gauges))
+	for n := range r.gauges {
+		gn = append(gn, n)
+	}
+	sort.Strings(gn)
+	for _, n := range gn {
+		fmt.Fprintf(w, "%s %g\n", n, r.gauges[n].Value())
 	}
 	for n, h := range r.hists {
 		var cum uint64

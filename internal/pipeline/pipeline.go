@@ -5,12 +5,14 @@ package pipeline
 import (
 	"context"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/anshikapundeel/telemetryscale/internal/gen"
 	"github.com/anshikapundeel/telemetryscale/internal/metrics"
 	"github.com/anshikapundeel/telemetryscale/internal/sink"
+	"github.com/anshikapundeel/telemetryscale/internal/trace"
 )
 
 type Policy int
@@ -30,6 +32,7 @@ type Config struct {
 	MaxBackoff    time.Duration
 	SendTimeout   time.Duration
 	Policy        Policy
+	Tracer        *trace.Tracer // optional; nil disables tracing
 }
 
 type Pipeline struct {
@@ -116,18 +119,24 @@ func (p *Pipeline) worker(ctx context.Context) {
 // send retries with capped exponential backoff and full jitter.
 func (p *Pipeline) send(ctx context.Context, batch []gen.Sample) {
 	start := time.Now()
+	span := p.cfg.Tracer.Start("pipeline.send")
+	span.Set("batch.size", strconv.Itoa(len(batch)))
 	backoff := p.cfg.BaseBackoff
 	for attempt := 0; ; attempt++ {
 		sctx, cancel := context.WithTimeout(ctx, p.cfg.SendTimeout)
 		err := p.out.Send(sctx, batch)
 		cancel()
 		if err == nil {
+			span.Set("attempts", strconv.Itoa(attempt+1))
+			span.End(nil)
 			p.mOK.Add(1)
 			p.mSamples.Add(uint64(len(batch)))
 			p.lat.Observe(time.Since(start).Seconds())
 			return
 		}
 		if attempt >= p.cfg.MaxRetries || ctx.Err() != nil {
+			span.Set("attempts", strconv.Itoa(attempt+1))
+			span.End(err)
 			p.mFail.Add(1)
 			p.mDrop.Add(uint64(len(batch)))
 			p.lat.Observe(time.Since(start).Seconds())

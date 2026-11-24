@@ -34,7 +34,7 @@ func (s *ClickHouseSink) Send(ctx context.Context, batch []gen.Sample) error {
 	enc := json.NewEncoder(&buf)
 	for _, b := range batch {
 		_ = enc.Encode(map[string]any{
-			"ts": b.TS.UnixMilli(), "tenant": b.Tenant, "name": b.Name,
+			"ts": chTime(b.TS), "tenant": b.Tenant, "name": b.Name,
 			"labels": b.Labels, "value": b.Value,
 		})
 	}
@@ -76,3 +76,6 @@ func (f *FakeSink) Send(ctx context.Context, batch []gen.Sample) error {
 	f.Received.Add(uint64(len(batch)))
 	return nil
 }
+
+// chTime formats a timestamp for ClickHouse DateTime64(3) JSON input (UTC).
+func chTime(t time.Time) string { return t.UTC().Format("2006-01-02 15:04:05.000") }
